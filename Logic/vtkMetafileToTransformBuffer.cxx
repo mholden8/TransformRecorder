@@ -67,24 +67,24 @@ std::string MatrixToString( vtkMatrix4x4* matrix )
   std::stringstream ss;
   
   ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
+  ss << matrix->GetElement( 0, 1 ) << " ";
+  ss << matrix->GetElement( 0, 2 ) << " ";
+  ss << matrix->GetElement( 0, 3 ) << " ";
   
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
+  ss << matrix->GetElement( 1, 0 ) << " ";
+  ss << matrix->GetElement( 1, 1 ) << " ";
+  ss << matrix->GetElement( 1, 2 ) << " ";
+  ss << matrix->GetElement( 1, 3 ) << " ";
   
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
+  ss << matrix->GetElement( 2, 0 ) << " ";
+  ss << matrix->GetElement( 2, 1 ) << " ";
+  ss << matrix->GetElement( 2, 2 ) << " ";
+  ss << matrix->GetElement( 2, 3 ) << " ";
   
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
-  ss << matrix->GetElement( 0, 0 ) << " ";
+  ss << matrix->GetElement( 3, 0 ) << " ";
+  ss << matrix->GetElement( 3, 1 ) << " ";
+  ss << matrix->GetElement( 3, 2 ) << " ";
+  ss << matrix->GetElement( 3, 3 ) << " ";
 
   return ss.str();
 }
@@ -196,13 +196,29 @@ void vtkMetafileToTransformBuffer
     // Convert the string to transform and add transform to hierarchy
     if ( frameFieldName.find( "Transform" ) != std::string::npos && frameFieldName.find( "Status" ) == std::string::npos )
     {
-      // Create the transform recorder
+      // Create the transform record
       vtkTransformRecord* transformRecord =  vtkTransformRecord::New();
       transformRecord->SetTransform( value );
       transformRecord->SetDeviceName( frameFieldName );
-      transformRecord->SetTime( frameNumber );      
+      transformRecord->SetTime( frameNumber );
+
+      // Find the inverse of the matrix
+      vtkSmartPointer< vtkMatrix4x4 > matrix = vtkSmartPointer< vtkMatrix4x4 >::New();
+      MatrixFromString( matrix, value );
+      matrix->Invert();
+      std::string inverseValue = MatrixToString( matrix );
       
+      std::stringstream inverseNameStream;
+      inverseNameStream << frameFieldName << "Inverse";
+
+      // Add the inverse record too
+      vtkTransformRecord* transformRecordInverse =  vtkTransformRecord::New();
+      transformRecordInverse->SetTransform( inverseValue );
+      transformRecordInverse->SetDeviceName( inverseNameStream.str() );
+      transformRecordInverse->SetTime( frameNumber );
+
       FrameNumberToTransformRecords[ frameNumber ].push_back( transformRecord );
+      FrameNumberToTransformRecords[ frameNumber ].push_back( transformRecordInverse );
     }
 
     if ( frameFieldName.find( "Timestamp" ) != std::string::npos )
