@@ -19,12 +19,14 @@
 ==============================================================================*/
 
 // Qt includes
+#include "QFileInfo.h"
 
 // SlicerQt includes
 #include "qSlicerTransformRecorderIO.h"
 
 // Logic includes
 #include "vtkSlicerTransformRecorderLogic.h"
+#include "vtkMetafileToTransformBuffer.h"
 
 // MRML includes
 
@@ -80,21 +82,41 @@ qSlicerIO::IOFileType qSlicerTransformRecorderIO::fileType() const
 //-----------------------------------------------------------------------------
 QStringList qSlicerTransformRecorderIO::extensions() const
 {
-  return QStringList() << "Transform Buffer (*.xml)";
+  return QStringList() << "Transform Buffer (*.xml)" << "Transform Buffer (*.mha)";
 }
 
 //-----------------------------------------------------------------------------
 bool qSlicerTransformRecorderIO::load(const IOProperties& properties)
 {
   Q_D(qSlicerTransformRecorderIO);
+
   Q_ASSERT( properties.contains("fileName") );
+
   QString fileName = properties["fileName"].toString();
+
+  QFileInfo fileInfo( fileName );
+  QString extension = fileInfo.suffix();
+  QString baseName = fileInfo.baseName();
   
   vtkSmartPointer< vtkMRMLTransformBufferNode > importBufferNode;
   importBufferNode.TakeReference( vtkMRMLTransformBufferNode::SafeDownCast( this->mrmlScene()->CreateNodeByClass( "vtkMRMLTransformBufferNode" ) ) );
   importBufferNode->SetScene( this->mrmlScene() );
   this->mrmlScene()->AddNode( importBufferNode );
-  d->TransformRecorderLogic->ImportFromFile( importBufferNode, fileName.toStdString() );
+
+  if ( extension.toStdString().compare( "xml" ) == 0 )
+  {
+    d->TransformRecorderLogic->ImportFromFile( importBufferNode, fileName.toStdString() );
+  }
+
+  if ( extension.toStdString().compare( "mha" ) == 0 )
+  {
+    vtkSmartPointer< vtkMetafileToTransformBuffer > mhaReader = vtkSmartPointer< vtkMetafileToTransformBuffer >::New();
+    mhaReader->ImportFromMHAFile( importBufferNode, fileName.toStdString() );
+  }
+
+  std::stringstream importNodeName;
+  importNodeName << importBufferNode->GetName() << "_" << baseName.toStdString();
+  importBufferNode->SetName( importNodeName.str().c_str() );
 
   return true; // TODO: Check to see read was successful first
 }

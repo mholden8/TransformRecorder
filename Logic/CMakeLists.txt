@@ -10,21 +10,18 @@ set(module_logic_name "${PROJECT_NAME}")
 set(module_logic_export_directive "VTK_SLICER_TRANSFORMRECORDER_MODULE_LOGIC_EXPORT")
 
 
-# debug
-# MESSAGE( STATUS "***LOGIC OpenIGTLinkIF_SOURCE_DIR: ${OpenIGTLinkIF_SOURCE_DIR}/MRML" )
-
 
 # Additional directories to include
 set(module_logic_include_directories
   ${Slicer_Base_INCLUDE_DIRS}
-  #${Slicer_BINARY_DIR}/Modules/Loadable/OpenIGTLinkIF/MRML
-  # ${OpenIGTLinkIF_SOURCE_DIR}/MRML
   )
 
 # Source files
 set(module_logic_SRCS
   vtkSlicerTransformRecorderLogic.cxx
   vtkSlicerTransformRecorderLogic.h
+  vtkMetafileToTransformBuffer.cxx
+  vtkMetafileToTransformBuffer.h
   )
 
 # Additional Target libraries

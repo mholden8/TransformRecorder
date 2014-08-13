@@ -303,6 +303,7 @@ void vtkSlicerTransformRecorderLogic
   bufferNode->SetActiveTransformsFromBuffer();
 
   // Change the name to reflect the file it was read from
+  // TODO: Move this to file reader?
   int dotFound = fileName.find_last_of( "." );
   int slashFound = fileName.find_last_of( "/" );
   std::stringstream rootName;
@@ -311,6 +312,7 @@ void vtkSlicerTransformRecorderLogic
 
   // Add the active transform nodes to the scene
   // This will be particularly useful for the PerkEvaluator
+  // TODO: Is this unnecessary? The Perk Evaluator already creates the necessary transform nodes...
   std::vector<std::string> activeTransforms = bufferNode->GetActiveTransforms();
   for ( int i = 0; i < activeTransforms.size(); i++ )
   {	
