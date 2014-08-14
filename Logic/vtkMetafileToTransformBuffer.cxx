@@ -136,6 +136,7 @@ void vtkMetafileToTransformBuffer
   int lastFrameNumber = -1;
   std::map< int, std::string > FrameNumberToTimestamp;
   std::map< int, std::vector< vtkTransformRecord* > > FrameNumberToTransformRecords;
+  std::map< int, std::map< std::string, bool > > FrameNumberToStatuses;
 
   while ( fgets( line, MAX_LINE_LENGTH, stream ) )
   {
@@ -196,10 +197,19 @@ void vtkMetafileToTransformBuffer
     // Convert the string to transform and add transform to hierarchy
     if ( frameFieldName.find( "Transform" ) != std::string::npos && frameFieldName.find( "Status" ) == std::string::npos )
     {
+      // Find the transform name (i.e. remove the "Transform" from the end)
+      size_t transformFound;
+      transformFound = frameFieldName.find( "Transform" );
+      std::string transformName = frameFieldName.substr( 0, transformFound );
+
+      std::stringstream transformInverseNameStream;
+      transformInverseNameStream << transformName << "Inverse";
+      std::string transformInverseName = transformInverseNameStream.str();
+
       // Create the transform record
       vtkTransformRecord* transformRecord =  vtkTransformRecord::New();
       transformRecord->SetTransform( value );
-      transformRecord->SetDeviceName( frameFieldName );
+      transformRecord->SetDeviceName( transformName );
       transformRecord->SetTime( frameNumber );
 
       // Find the inverse of the matrix
@@ -207,18 +217,40 @@ void vtkMetafileToTransformBuffer
       MatrixFromString( matrix, value );
       matrix->Invert();
       std::string inverseValue = MatrixToString( matrix );
-      
-      std::stringstream inverseNameStream;
-      inverseNameStream << frameFieldName << "Inverse";
 
       // Add the inverse record too
       vtkTransformRecord* transformRecordInverse =  vtkTransformRecord::New();
       transformRecordInverse->SetTransform( inverseValue );
-      transformRecordInverse->SetDeviceName( inverseNameStream.str() );
+      transformRecordInverse->SetDeviceName( transformInverseName );
       transformRecordInverse->SetTime( frameNumber );
 
       FrameNumberToTransformRecords[ frameNumber ].push_back( transformRecord );
       FrameNumberToTransformRecords[ frameNumber ].push_back( transformRecordInverse );
+    }
+
+    // Find the transform status
+    if ( frameFieldName.find( "Transform" ) != std::string::npos && frameFieldName.find( "Status" ) != std::string::npos )
+    {
+      // Find the transform name (i.e. remove the "Transform" from the end)
+      size_t transformFound;
+      transformFound = frameFieldName.find( "Transform" );
+      std::string transformName = frameFieldName.substr( 0, transformFound );
+
+      std::stringstream transformInverseNameStream;
+      transformInverseNameStream << transformName << "Inverse";
+      std::string transformInverseName = transformInverseNameStream.str();
+
+      if ( value.compare( "INVALID" ) == 0 )
+      {
+        FrameNumberToStatuses[ frameNumber ][ transformName ] = false;
+        FrameNumberToStatuses[ frameNumber ][ transformInverseName ] = false;
+      }
+      else
+      {
+        FrameNumberToStatuses[ frameNumber ][ transformName ] = true;
+        FrameNumberToStatuses[ frameNumber ][ transformInverseName ] = true;
+      }
+
     }
 
     if ( frameFieldName.find( "Timestamp" ) != std::string::npos )
@@ -248,6 +280,12 @@ void vtkMetafileToTransformBuffer
 
     for ( int j = 0; j < FrameNumberToTransformRecords[ i ].size(); j++ )
     {
+      // Skip if the transform is invalid at the time
+      if ( ! FrameNumberToStatuses[ i ][ FrameNumberToTransformRecords[ i ].at( j )->GetDeviceName() ] )
+      {
+        continue;
+      }
+
       FrameNumberToTransformRecords[ i ].at( j )->SetTime( currentTime );
       bufferNode->AddTransform( FrameNumberToTransformRecords[ i ].at( j ) );
     }    
@@ -255,4 +293,5 @@ void vtkMetafileToTransformBuffer
 
   FrameNumberToTimestamp.clear();
   FrameNumberToTransformRecords.clear();
+  FrameNumberToStatuses.clear();
 }
