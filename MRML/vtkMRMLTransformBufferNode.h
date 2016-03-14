@@ -134,6 +134,8 @@ public:
   bool GetRecording();
   double GetCurrentTimestamp();
 
+  void GetCombinedTransformRecordBuffer( vtkLogRecordBuffer* combinedTransformRecordBuffer );
+
   void ProcessMRMLEvents( vtkObject *caller, unsigned long event, void *callData );
 
   std::string ToXMLString( vtkIndent indent );
@@ -154,8 +156,6 @@ public:
 
 
 protected:
-
-  void GetCombinedTransformRecordBuffer( vtkLogRecordBuffer* combinedTransformRecordBuffer );
   
   std::map< std::string, vtkSmartPointer< vtkLogRecordBuffer > > TransformRecordBuffers;
   vtkSmartPointer< vtkLogRecordBuffer > MessageRecordBuffer;
