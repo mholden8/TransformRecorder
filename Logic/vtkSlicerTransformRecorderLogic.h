@@ -77,10 +77,16 @@ public:
   void ObserveAllRecordedTransforms( vtkMRMLTransformBufferNode* bufferNode );
   void AddAllRecordedTransformsToScene( vtkMRMLTransformBufferNode* bufferNode );
 
+  // Editing operations on transform buffers
+  void MergeTransformBuffers( vtkMRMLTransformBufferNode* inBufferNode1, vtkMRMLTransformBufferNode* inBufferNode2, vtkMRMLTransformBufferNode* outBufferNode, double offset = 0 );
+  void SplitTransformBuffer( vtkMRMLTransformBufferNode* inBufferNode, vtkMRMLTransformBufferNode* outBufferNode1, vtkMRMLTransformBufferNode* outBufferNode2, double absTime );
+
   void ImportFromXMLFile( vtkMRMLTransformBufferNode* bufferNode, std::string fileName );
   void ExportToFile( vtkMRMLTransformBufferNode* bufferNode, std::string fileName );
 
   void ImportFromMHAFile( vtkMRMLTransformBufferNode* bufferNode, std::string fileName );
+
+
 
   // Grab module logic
   static vtkMRMLAbstractLogic* GetSlicerModuleLogic( std::string moduleName );

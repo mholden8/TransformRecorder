@@ -216,6 +216,95 @@ void vtkSlicerTransformRecorderLogic
 
 
 void vtkSlicerTransformRecorderLogic
+::MergeTransformBuffers( vtkMRMLTransformBufferNode* inBufferNode1, vtkMRMLTransformBufferNode* inBufferNode2, vtkMRMLTransformBufferNode* outBufferNode, double offset )
+{
+  // Note: The more overlapped the two buffers are, the longer this will take to merge them
+  // Note: The offset is the difference between the starts of the two buffers (i.e. the time after buffer1 that buffer2 should start)
+  outBufferNode->Clear();
+
+   // Copy everything to work with copies of all the records
+  vtkSmartPointer< vtkMRMLTransformBufferNode > firstBufferNode = vtkSmartPointer< vtkMRMLTransformBufferNode >::New();
+  vtkSmartPointer< vtkMRMLTransformBufferNode > lastBufferNode = vtkSmartPointer< vtkMRMLTransformBufferNode >::New();
+
+  if ( offset < 0 )
+  {
+    firstBufferNode->Copy( inBufferNode2 );
+    lastBufferNode->Copy( inBufferNode1 );
+  }
+  else
+  {
+    firstBufferNode->Copy( inBufferNode1 );
+    lastBufferNode->Copy( inBufferNode2 );
+  }
+  offset = std::abs( offset );
+ 
+
+  // Find the average sampling rate to know the time between the last transform of the first buffer and the first transform of the last buffer
+  double firstMinTime = firstBufferNode->GetMinimumTime();
+  double lastMinTime = lastBufferNode->GetMinimumTime();
+
+  // Bump the times for the last buffer
+  vtkSmartPointer< vtkLogRecordBuffer > lastCombinedBuffer = vtkSmartPointer< vtkLogRecordBuffer >::New();
+  lastBufferNode->GetCombinedTransformRecordBuffer( lastCombinedBuffer ); // Note: This only works because the records are not deep copied.
+  for ( int i = 0; i < lastCombinedBuffer->GetNumRecords(); i++ )
+  {
+    vtkSmartPointer< vtkLogRecord > currentRecord = lastCombinedBuffer->GetRecord( i );
+    currentRecord->SetTime( currentRecord->GetTime() - lastMinTime + firstMinTime + offset );
+  }
+  for ( int i = 0; i < lastBufferNode->GetNumMessages(); i++ )
+  {
+    vtkSmartPointer< vtkLogRecord > currentRecord = lastBufferNode->GetMessageAtIndex( i );
+    currentRecord->SetTime( currentRecord->GetTime() - lastMinTime + firstMinTime + offset );
+  }
+
+  // Concatenate everything together
+  outBufferNode->Concatenate( firstBufferNode );
+  outBufferNode->Concatenate( lastBufferNode );
+}
+
+
+void vtkSlicerTransformRecorderLogic
+::SplitTransformBuffer( vtkMRMLTransformBufferNode* inBufferNode, vtkMRMLTransformBufferNode* outBufferNode1, vtkMRMLTransformBufferNode* outBufferNode2, double absTime )
+{
+  outBufferNode1->Clear();
+  outBufferNode2->Clear();
+
+  // Add the record to the appropriate buffer
+  vtkSmartPointer< vtkLogRecordBuffer > combinedBuffer = vtkSmartPointer< vtkLogRecordBuffer >::New();
+  inBufferNode->GetCombinedTransformRecordBuffer( combinedBuffer ); // Note: This only works because the records are not deep copied.
+  for ( int i = 0; i < combinedBuffer->GetNumRecords(); i++ )
+  {
+    vtkSmartPointer< vtkTransformRecord > currentTransformRecord = vtkSmartPointer< vtkTransformRecord >::New();
+    currentTransformRecord->Copy( vtkTransformRecord::SafeDownCast( combinedBuffer->GetRecord( i ) ) );
+
+    if ( currentTransformRecord->GetTime() < absTime )
+    {
+      outBufferNode1->AddTransform( currentTransformRecord );
+    }
+    else
+    {
+      outBufferNode2->AddTransform( currentTransformRecord );
+    }
+  }
+  for ( int i = 0; i < inBufferNode->GetNumMessages(); i++ )
+  {
+    vtkSmartPointer< vtkMessageRecord > currentMessageRecord = vtkSmartPointer< vtkMessageRecord >::New();
+    currentMessageRecord->Copy( inBufferNode->GetMessageAtIndex( i ) );
+
+    if ( currentMessageRecord->GetTime() < absTime )
+    {
+      outBufferNode1->AddMessage( currentMessageRecord );
+    }
+    else
+    {
+      outBufferNode2->AddMessage( currentMessageRecord );
+    }
+  }
+
+}
+
+
+void vtkSlicerTransformRecorderLogic
 ::ImportFromXMLFile( vtkMRMLTransformBufferNode* bufferNode, std::string fileName )
 {
   // Clear the current buffer prior to importing
